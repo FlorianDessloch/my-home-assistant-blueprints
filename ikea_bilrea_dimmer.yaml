@@ -1,0 +1,146 @@
+blueprint:
+  name: "IKEA BILRESA - KAJPLATS Steuerung"
+  description: "Bequeme Steuerung Ã¼ber GerÃ¤teauswahl fÃ¼r die BILRESA unter Matter."
+  domain: automation
+  input:
+    bilresa_device:
+      name: "BILRESA Remote (QuellgerÃ¤t)"
+      description: "WÃ¤hle hier deine IKEA BILRESA Fernbedienung aus."
+      selector:
+        device:
+          multiple: false
+    scene1_light:
+      name: "Lampe Modus 1 (LED 1)"
+      selector:
+        target:
+          entity:
+            - domain: light
+    scene2_light:
+      name: "Lampe Modus 2 (LED 2)"
+      selector:
+        target:
+          entity:
+            - domain: light
+    scene3_light:
+      name: "Lampe Modus 3 (LED 3)"
+      selector:
+        target:
+          entity:
+            - domain: light
+    step_pct:
+      name: "Dimm-Schrittweite (%)"
+      description: "HelligkeitsÃ¤nderung pro Scroll-Raste (Empfohlen: 5-10%)"
+      default: 7
+      selector:
+        number:
+          min: 1
+          max: 20
+          unit_of_measurement: "%"
+
+mode: restart
+
+variables:
+  target_device: !input bilresa_device
+  step: !input step_pct
+
+trigger:
+  - platform: event
+    event_type: state_changed
+
+condition:
+  # Stellt sicher, dass das Event von einem Sensor deiner gewÃ¤hlten BILRESA stammt
+  - condition: template
+    value_template: "{{ trigger.event.data.entity_id in device_entities(target_device) }}"
+  - condition: template
+    value_template: "{{ trigger.event.data.new_state is not none and trigger.event.data.old_state is not none }}"
+  - condition: template
+    value_template: "{{ trigger.event.data.new_state.state != trigger.event.data.old_state.state }}"
+
+action:
+  - variables:
+      ent: "{{ trigger.event.data.entity_id }}"
+
+  - choose:
+      # === MODUS 1 (LED 1) ===
+      - conditions:
+          - condition: template
+            value_template: "{{ ent.endswith('_3') or 'taste_3' in ent }}"
+        sequence:
+          - action: light.toggle
+            target: !input scene1_light
+
+      - conditions:
+          - condition: template
+            value_template: "{{ ent.endswith('_1') or 'taste_1' in ent }}"
+        sequence:
+          - action: light.turn_on
+            target: !input scene1_light
+            data:
+              brightness_step_pct: "{{ step }}"
+              transition: 0
+
+      - conditions:
+          - condition: template
+            value_template: "{{ ent.endswith('_2') or 'taste_2' in ent }}"
+        sequence:
+          - action: light.turn_on
+            target: !input scene1_light
+            data:
+              brightness_step_pct: "{{ step * -1 }}"
+              transition: 0
+
+      # === MODUS 2 (LED 2) ===
+      - conditions:
+          - condition: template
+            value_template: "{{ ent.endswith('_6') or 'taste_6' in ent }}"
+        sequence:
+          - action: light.toggle
+            target: !input scene2_light
+
+      - conditions:
+          - condition: template
+            value_template: "{{ ent.endswith('_4') or 'taste_4' in ent }}"
+        sequence:
+          - action: light.turn_on
+            target: !input scene2_light
+            data:
+              brightness_step_pct: "{{ step }}"
+              transition: 0
+
+      - conditions:
+          - condition: template
+            value_template: "{{ ent.endswith('_5') or 'taste_5' in ent }}"
+        sequence:
+          - action: light.turn_on
+            target: !input scene2_light
+            data:
+              brightness_step_pct: "{{ step * -1 }}"
+              transition: 0
+
+      # === MODUS 3 (LED 3) ===
+      - conditions:
+          - condition: template
+            value_template: "{{ ent.endswith('_9') or 'taste_9' in ent }}"
+        sequence:
+          - action: light.toggle
+            target: !input scene3_light
+
+      - conditions:
+          - condition: template
+            value_template: "{{ ent.endswith('_7') or 'taste_7' in ent }}"
+        sequence:
+          - action: light.turn_on
+            target: !input scene3_light
+            data:
+              brightness_step_pct: "{{ step }}"
+              transition: 0
+
+      - conditions:
+          - condition: template
+            value_template: "{{ ent.endswith('_8') or 'taste_8' in ent }}"
+        sequence:
+          - action: light.turn_on
+            target: !input scene3_light
+            data:
+              brightness_step_pct: "{{ step * -1 }}"
+              transition: 0
