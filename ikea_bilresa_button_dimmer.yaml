@@ -1,19 +1,18 @@
 blueprint:
-  name: Bilresa 2-Tasten Schalter - Lichtsteuerung (Toggle & Dimmen)
+  name: IKEA Bilresa Fernbedienung - Lichtsteuerung (Geräte-Auswahl)
   description: >
-    Steuert eine Licht-Gruppe oder ein Leuchtmittel mit einem 2-Tasten-Bilresa-Schalter (Z2M).
-    - Taste 1 (Großer Punkt): Single Click = Toggle | Hold = Hochdimmen
-    - Taste 2 (Kleiner Punkt): Single Click = Toggle | Hold = Runterdimmen
+    Steuert ein Licht oder eine Licht-Gruppe mit einer IKEA Bilresa Fernbedienung.
+    Wähle einfach direkt das IKEA Bilresa Gerät aus der Liste.
+    - Taste 1 (Großer Punkt): Klick = Toggle | Halten = Hochdimmen
+    - Taste 2 (Kleiner Punkt): Klick = Toggle | Halten = Runterdimmen
   domain: automation
   source_url: https://github.com/FlorianDessloch/my-home-assistant-blueprints/blob/main/ikea_bilrea_button_dimmer.yaml
   input:
-    switch_action_sensor:
-      name: Schalter Action-Sensor
-      description: Wählen Sie den Action-Sensor des Bilresa-Schalters aus (z. B. sensor.blesa_schalter_action).
+    remote_device:
+      name: IKEA Bilresa Fernbedienung
+      description: Wähle hier direkt das Gerät deiner IKEA Bilresa Fernbedienung aus.
       selector:
-        entity:
-          filter:
-            - domain: sensor
+        device: {}
     target_light:
       name: Ziel-Licht / Licht-Gruppe
       description: Das zu steuernde Licht oder die Licht-Gruppe.
@@ -23,7 +22,7 @@ blueprint:
             - domain: light
     dim_step:
       name: Dimm-Schrittweite (%)
-      description: Um wie viel Prozent die Helligkeit pro Intervall angepasst wird.
+      description: Um wie viel Prozent die Helligkeit pro Schritt angepasst wird.
       default: 5
       selector:
         number:
@@ -31,8 +30,8 @@ blueprint:
           max: 20
           unit_of_measurement: "%"
     dim_speed:
-      name: Dimm-Geschwindigkeit (Intervall in ms)
-      description: Zeitabstand zwischen den Dimm-Schritten in Millisekunden (kleinerer Wert = schnelleres Dimmen).
+      name: Dimm-Geschwindigkeit (ms)
+      description: Zeitabstand zwischen den Dimm-Schritten in Millisekunden (kleiner = schneller).
       default: 300
       selector:
         number:
@@ -41,61 +40,181 @@ blueprint:
           step: 50
           unit_of_measurement: "ms"
 
+variables:
+  step: !input dim_step
+  step_down: "{{ (step | int) * -1 }}"
+
 mode: restart
 max_exceeded: silent
 
 trigger:
-  - platform: state
-    entity_id: !input switch_action_sensor
+  # --- Zigbee2MQTT Device Triggers ---
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: 1_single
+    id: t1_single
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: "on"
+    id: t1_single
+
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: 2_single
+    id: t2_single
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: "off"
+    id: t2_single
+
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: 1_hold
+    id: t1_hold
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: brightness_move_up
+    id: t1_hold
+
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: 2_hold
+    id: t2_hold
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: brightness_move_down
+    id: t2_hold
+
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: release
+    id: release
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: 1_release
+    id: release
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: 2_release
+    id: release
+  - platform: device
+    domain: mqtt
+    device_id: !input remote_device
+    type: action
+    subtype: brightness_stop
+    id: release
+
+  # --- ZHA Event Triggers ---
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote_device
+      command: "on"
+    id: t1_single
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote_device
+      command: "off"
+    id: t2_single
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote_device
+      command: "move_with_on_off"
+    id: t1_hold
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote_device
+      command: "move"
+    id: t2_hold
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote_device
+      command: "stop"
+    id: release
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote_device
+      command: "stop_with_on_off"
+    id: release
 
 action:
   - choose:
-      # --- TASTE 1 (Großer Punkt) : Single Click -> Toggle ---
+      # --- Taste 1 oder Taste 2 Klick: Toggle ---
       - conditions:
-          - condition: template
-            value_template: "{{ trigger.to_state.state in ['1_single', 'button_1_single', 'left_single'] }}"
+          - condition: trigger
+            id:
+              - t1_single
+              - t2_single
         sequence:
-          - service: light.toggle
+          - action: light.toggle
             target: !input target_light
 
-      # --- TASTE 2 (Kleiner Punkt) : Single Click -> Toggle ---
+      # --- Taste 1 (Großer Punkt) Halten: Hochdimmen ---
       - conditions:
-          - condition: template
-            value_template: "{{ trigger.to_state.state in ['2_single', 'button_2_single', 'right_single'] }}"
-        sequence:
-          - service: light.toggle
-            target: !input target_light
-
-      # --- TASTE 1 (Großer Punkt) : Hold -> Hochdimmen ---
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.to_state.state in ['1_hold', 'button_1_hold', 'left_hold'] }}"
+          - condition: trigger
+            id:
+              - t1_hold
         sequence:
           - repeat:
               while:
                 - condition: template
-                  value_template: "{{ states(inputs.switch_action_sensor) not in ['release', '1_release', ''] }}"
+                  value_template: "{{ true }}"
               sequence:
-                - service: light.turn_on
+                - action: light.turn_on
                   target: !input target_light
                   data:
                     brightness_step_pct: !input dim_step
                 - delay:
                     milliseconds: !input dim_speed
 
-      # --- TASTE 2 (Kleiner Punkt) : Hold -> Runterdimmen ---
+      # --- Taste 2 (Kleiner Punkt) Halten: Runterdimmen ---
       - conditions:
-          - condition: template
-            value_template: "{{ trigger.to_state.state in ['2_hold', 'button_2_hold', 'right_hold'] }}"
+          - condition: trigger
+            id:
+              - t2_hold
         sequence:
           - repeat:
               while:
                 - condition: template
-                  value_template: "{{ states(inputs.switch_action_sensor) not in ['release', '2_release', ''] }}"
+                  value_template: "{{ true }}"
               sequence:
-                - service: light.turn_on
+                - action: light.turn_on
                   target: !input target_light
                   data:
-                    brightness_step_pct: "{{ (inputs.dim_step | int) * -1 }}"
+                    brightness_step_pct: "{{ step_down }}"
                 - delay:
                     milliseconds: !input dim_speed
+
+      # --- Loslassen (Release): Beendet die Dimm-Schleife sofort ---
+      - conditions:
+          - condition: trigger
+            id:
+              - release
+        sequence: []
