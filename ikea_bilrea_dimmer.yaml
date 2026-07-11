@@ -1,6 +1,6 @@
 blueprint:
-  name: "IKEA BILRESA - KAJPLATS Steuerung (mit OFF-Sperre)"
-  description: "Steuerung für BILRESA. Ignoriert Scroll-Events bei ausgeschalteter Lampe, um ungewolltes Wiedereinschalten zu verhindern."
+  name: "IKEA BILRESA - KAJPLATS Dimmer Steuerung (mit OFF-Sperre)"
+  description: "Dimmer Steuerung für BILRESA. Ignoriert Scroll-Events bei ausgeschalteter Lampe, um ungewolltes Wiedereinschalten zu verhindern."
   domain: automation
   source_url: https://github.com/FlorianDessloch/my-home-assistant-blueprints/blob/main/ikea_bilrea_dimmer.yaml
   input:
