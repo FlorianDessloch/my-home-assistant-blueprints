@@ -1,7 +1,7 @@
 blueprint:
   name: Bilresa 2-Tasten Schalter - Lichtsteuerung (Toggle & Dimmen)
   description: >
-    Steuert eine Licht-Gruppe oder ein Leuchtmittel mit einem 2-Tasten-Blesa-Schalter (Z2M).
+    Steuert eine Licht-Gruppe oder ein Leuchtmittel mit einem 2-Tasten-Bilresa-Schalter (Z2M).
     - Taste 1 (Großer Punkt): Single Click = Toggle | Hold = Hochdimmen
     - Taste 2 (Kleiner Punkt): Single Click = Toggle | Hold = Runterdimmen
   domain: automation
@@ -9,7 +9,7 @@ blueprint:
   input:
     switch_action_sensor:
       name: Schalter Action-Sensor
-      description: Wählen Sie den Action-Sensor des Blesa-Schalters aus (z. B. sensor.blesa_schalter_action).
+      description: Wählen Sie den Action-Sensor des Bilresa-Schalters aus (z. B. sensor.blesa_schalter_action).
       selector:
         entity:
           filter:
