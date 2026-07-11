@@ -1,16 +1,27 @@
 blueprint:
-  name: IKEA Bilresa Fernbedienung - Lichtsteuerung (Geräte-Auswahl)
+  name: IKEA Bilresa Fernbedienung (Matter / Event)
   description: >
-    Steuert ein Licht oder eine Licht-Gruppe mit einer IKEA Bilresa Fernbedienung.
-    Wähle einfach direkt das Fernbedienungs-Gerät aus.
+    Steuert eine Lichtgruppe mit der IKEA Bilresa 2-Tasten-Fernbedienung.
+    Wähle im UI einfach die beiden Event-Entitäten für Taste 1 und Taste 2 aus.
   domain: automation
   source_url: https://github.com/FlorianDessloch/my-home-assistant-blueprints/blob/main/ikea_bilrea_button_dimmer.yaml
   input:
-    remote_device:
-      name: IKEA Bilresa Fernbedienung
-      description: Wähle hier das Gerät deiner IKEA Bilresa aus.
+    button_1:
+      name: Taste 1 (Großer Punkt)
+      description: Wähle die Entität für Taste 1 (z. B. event.bilresa_button_1)
       selector:
-        device: {}
+        entity:
+          domain:
+            - event
+            - sensor
+    button_2:
+      name: Taste 2 (Kleiner Punkt)
+      description: Wähle die Entität für Taste 2 (z. B. event.bilresa_button_2)
+      selector:
+        entity:
+          domain:
+            - event
+            - sensor
     target_light:
       name: Ziel-Licht / Licht-Gruppe
       description: Das zu steuernde Licht oder die Licht-Gruppe.
@@ -20,7 +31,6 @@ blueprint:
             - domain: light
     dim_step:
       name: Dimm-Schrittweite (%)
-      description: Helligkeitsänderung pro Schritt in Prozent.
       default: 5
       selector:
         number:
@@ -29,7 +39,6 @@ blueprint:
           unit_of_measurement: "%"
     dim_speed:
       name: Dimm-Geschwindigkeit (ms)
-      description: Zeitabstand zwischen den Schritten in Millisekunden.
       default: 300
       selector:
         number:
@@ -42,58 +51,41 @@ mode: restart
 max_exceeded: silent
 
 trigger:
-  # ZHA Events abfangen
-  - platform: event
-    event_type: zha_event
-  # Zigbee2MQTT / Sensor-Zustandsänderungen abfangen
-  - platform: event
-    event_type: state_changed
-
-condition:
-  # Filtert nur Events heraus, die exakt zu dem ausgewählten Gerät gehören
-  - condition: template
-    value_template: >-
-      {% set dev = inputs.remote_device %}
-      {% if trigger.event.event_type == 'zha_event' %}
-        {{ trigger.event.data.device_id == dev }}
-      {% elif trigger.event.event_type == 'state_changed' %}
-        {{ trigger.event.data.entity_id in device_entities(dev) and 'action' in trigger.event.data.entity_id }}
-      {% else %}
-        false
-      {% endif %}
+  - platform: state
+    entity_id: !input button_1
+    id: b1
+  - platform: state
+    entity_id: !input button_2
+    id: b2
 
 action:
   - variables:
-      action_val: >-
-        {% if trigger.event.event_type == 'zha_event' %}
-          {{ trigger.event.data.command }}
-        {% else %}
-          {{ trigger.event.data.new_state.state }}
-        {% endif %}
-      step_val: !input dim_step
-      step_down: "{{ (step_val | int) * -1 }}"
+      # Liest das Matter-Event aus den Attributen oder den Status aus
+      evt: "{{ trigger.to_state.attributes.event_type | default(trigger.to_state.state, true) }}"
+      step_up: !input dim_step
+      step_down: "{{ (step_up | int) * -1 }}"
 
   - choose:
-      # --- Taste 1 (Großer Punkt): Klick -> Toggle ---
+      # --- Taste 1: Klick -> Toggle ---
       - conditions:
           - condition: template
-            value_template: "{{ action_val in ['on', '1_single', 'button_1_single', 'initial_press_1'] }}"
+            value_template: "{{ trigger.id == 'b1' and evt in ['initial_press', 'multi_press_1', 'press', '1_single', 'on'] }}"
         sequence:
           - action: light.toggle
             target: !input target_light
 
-      # --- Taste 2 (Kleiner Punkt): Klick -> Toggle ---
+      # --- Taste 2: Klick -> Toggle ---
       - conditions:
           - condition: template
-            value_template: "{{ action_val in ['off', '2_single', 'button_2_single', 'initial_press_2'] }}"
+            value_template: "{{ trigger.id == 'b2' and evt in ['initial_press', 'multi_press_1', 'press', '2_single', 'off'] }}"
         sequence:
           - action: light.toggle
             target: !input target_light
 
-      # --- Taste 1 (Großer Punkt): Halten -> Hochdimmen ---
+      # --- Taste 1: Halten -> Hochdimmen ---
       - conditions:
           - condition: template
-            value_template: "{{ action_val in ['brightness_move_up', 'move_with_on_off', '1_hold', 'hold_1'] }}"
+            value_template: "{{ trigger.id == 'b1' and evt in ['long_press', '1_hold', 'hold'] }}"
         sequence:
           - repeat:
               while:
@@ -107,10 +99,10 @@ action:
                 - delay:
                     milliseconds: !input dim_speed
 
-      # --- Taste 2 (Kleiner Punkt): Halten -> Runterdimmen ---
+      # --- Taste 2: Halten -> Runterdimmen ---
       - conditions:
           - condition: template
-            value_template: "{{ action_val in ['brightness_move_down', 'move', '2_hold', 'hold_2'] }}"
+            value_template: "{{ trigger.id == 'b2' and evt in ['long_press', '2_hold', 'hold'] }}"
         sequence:
           - repeat:
               while:
@@ -124,8 +116,8 @@ action:
                 - delay:
                     milliseconds: !input dim_speed
 
-      # --- Loslassen: Bricht die Dimm-Schleife ab ---
+      # --- Loslassen: Stoppt die Dimm-Schleife sofort ---
       - conditions:
           - condition: template
-            value_template: "{{ action_val in ['brightness_stop', 'stop', 'stop_with_on_off', 'release', '1_release', '2_release', ''] }}"
+            value_template: "{{ evt in ['long_release', 'short_release', 'release', '1_release', '2_release'] }}"
         sequence: []
