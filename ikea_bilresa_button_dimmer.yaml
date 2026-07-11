@@ -1,5 +1,5 @@
 blueprint:
-  name: IKEA Bilresa Fernbedienung (Matter / Event)
+  name: IKEA Bilresa - KAJPLATS Button Steuerung
   description: >
     Steuert eine Lichtgruppe mit der IKEA Bilresa 2-Tasten-Fernbedienung.
     Wähle im UI einfach die beiden Event-Entitäten für Taste 1 und Taste 2 aus.
