@@ -35,8 +35,8 @@ blueprint:
           max: 20
           unit_of_measurement: "%"
 
-mode: parallel
-max: 25
+mode: single
+max_exceeded: silent
 
 variables:
   target_device: !input bilresa_device
@@ -50,6 +50,9 @@ trigger:
     event_type: state_changed
 
 condition:
+  # Nur Sensoren des Geräts verarbeiten (schließt parallele event.-Signale aus)
+  - condition: template
+    value_template: "{{ trigger.event.data.entity_id.startswith('sensor.') }}"
   - condition: template
     value_template: "{{ trigger.event.data.entity_id in device_entities(target_device) }}"
   - condition: template
@@ -64,21 +67,21 @@ action:
 
   - choose:
       # === MODUS 1 (LED 1) ===
-      # Ein/Aus: Reagiert nur beim DRÜCKEN (Wert = 1), ignoriert das LOSLASSEN (Wert = 0)
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_3') or 'taste_3' in ent }}"
+            value_template: "{{ ent.endswith('_3') }}"
           - condition: template
-            value_template: "{{ new_st in ['1', 'on', 'true', 1] or 'event.' in ent }}"
+            value_template: "{{ new_st in ['1', 1, 'on', 'true'] }}"
         sequence:
           - action: light.toggle
             target:
               entity_id: !input light_1
+          - delay:
+              milliseconds: 300
 
-      # Scroll Up: Nur dimmen, wenn Lampe AN ist
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_1') or 'taste_1' in ent }}"
+            value_template: "{{ ent.endswith('_1') }}"
           - condition: template
             value_template: "{{ is_state(l1, 'on') }}"
         sequence:
@@ -89,10 +92,9 @@ action:
               brightness_step_pct: "{{ step }}"
               transition: 0
 
-      # Scroll Down: Nur dimmen, wenn Lampe AN ist
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_2') or 'taste_2' in ent }}"
+            value_template: "{{ ent.endswith('_2') }}"
           - condition: template
             value_template: "{{ is_state(l1, 'on') }}"
         sequence:
@@ -106,17 +108,19 @@ action:
       # === MODUS 2 (LED 2) ===
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_6') or 'taste_6' in ent }}"
+            value_template: "{{ ent.endswith('_6') }}"
           - condition: template
-            value_template: "{{ new_st in ['1', 'on', 'true', 1] or 'event.' in ent }}"
+            value_template: "{{ new_st in ['1', 1, 'on', 'true'] }}"
         sequence:
           - action: light.toggle
             target:
               entity_id: !input light_2
+          - delay:
+              milliseconds: 300
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_4') or 'taste_4' in ent }}"
+            value_template: "{{ ent.endswith('_4') }}"
           - condition: template
             value_template: "{{ is_state(l2, 'on') }}"
         sequence:
@@ -129,7 +133,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_5') or 'taste_5' in ent }}"
+            value_template: "{{ ent.endswith('_5') }}"
           - condition: template
             value_template: "{{ is_state(l2, 'on') }}"
         sequence:
@@ -143,17 +147,19 @@ action:
       # === MODUS 3 (LED 3) ===
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_9') or 'taste_9' in ent }}"
+            value_template: "{{ ent.endswith('_9') }}"
           - condition: template
-            value_template: "{{ new_st in ['1', 'on', 'true', 1] or 'event.' in ent }}"
+            value_template: "{{ new_st in ['1', 1, 'on', 'true'] }}"
         sequence:
           - action: light.toggle
             target:
               entity_id: !input light_3
+          - delay:
+              milliseconds: 300
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_7') or 'taste_7' in ent }}"
+            value_template: "{{ ent.endswith('_7') }}"
           - condition: template
             value_template: "{{ is_state(l3, 'on') }}"
         sequence:
@@ -166,7 +172,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_8') or 'taste_8' in ent }}"
+            value_template: "{{ ent.endswith('_8') }}"
           - condition: template
             value_template: "{{ is_state(l3, 'on') }}"
         sequence:
