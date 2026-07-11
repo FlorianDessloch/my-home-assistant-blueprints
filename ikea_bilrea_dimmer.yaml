@@ -4,30 +4,31 @@ blueprint:
   domain: automation
   source_url: https://github.com/FlorianDessloch/my-home-assistant-blueprints/blob/main/ikea_bilrea_dimmer.yaml
   input:
-    bilresa_device:
-      name: "BILRESA Remote (Quellgerät)"
-      description: "Wähle hier deine IKEA BILRESA Fernbedienung aus."
+    scroll_sensors:
+      name: "BILRESA Scroll-Sensoren (1 bis 9)"
+      description: "Wähle hier alle 9 Schalterstellungs-Sensoren deiner BILRESA aus (sensor...schalterstellung_1 bis 9)."
       selector:
-        device:
-          multiple: false
-    scene1_light:
+        entity:
+          domain: sensor
+          multiple: true
+    light_1:
       name: "Lampe Modus 1 (LED 1)"
       selector:
         entity:
           domain: light
-    scene2_light:
+    light_2:
       name: "Lampe Modus 2 (LED 2)"
       selector:
         entity:
           domain: light
-    scene3_light:
+    light_3:
       name: "Lampe Modus 3 (LED 3)"
       selector:
         entity:
           domain: light
     step_pct:
       name: "Dimm-Schrittweite (%)"
-      description: "Helligkeitsänderung pro Scroll-Raste (Empfohlen: 5-10%)"
+      description: "Helligkeitsänderung pro Raste"
       default: 7
       selector:
         number:
@@ -35,63 +36,61 @@ blueprint:
           max: 20
           unit_of_measurement: "%"
 
-mode: restart
+mode: queued
+max: 25
 
 variables:
-  target_device: !input bilresa_device
-  s1: !input scene1_light
-  s2: !input scene2_light
-  s3: !input scene3_light
+  l1: !input light_1
+  l2: !input light_2
+  l3: !input light_3
   step: !input step_pct
 
 trigger:
-  - platform: event
-    event_type: state_changed
+  - platform: state
+    entity_id: !input scroll_sensors
 
 condition:
   - condition: template
-    value_template: "{{ trigger.event.data.entity_id in device_entities(target_device) }}"
+    value_template: "{{ trigger.to_state is not none and trigger.from_state is not none }}"
   - condition: template
-    value_template: "{{ trigger.event.data.new_state is not none and trigger.event.data.old_state is not none }}"
-  - condition: template
-    value_template: "{{ trigger.event.data.new_state.state != trigger.event.data.old_state.state }}"
+    value_template: "{{ trigger.to_state.state != trigger.from_state.state }}"
 
 action:
   - variables:
-      ent: "{{ trigger.event.data.entity_id }}"
+      ent: "{{ trigger.entity_id }}"
 
   - choose:
       # === MODUS 1 (LED 1) ===
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_3') or 'taste_3' in ent }}"
+            value_template: "{{ ent.endswith('_3') }}"
         sequence:
           - action: light.toggle
             target:
-              entity_id: !input scene1_light
+              entity_id: !input light_1
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_1') or 'taste_1' in ent }}"
+            value_template: "{{ ent.endswith('_1') }}"
           - condition: template
-            value_template: "{{ is_state(s1, 'on') }}"
+            value_template: "{{ is_state(l1, 'on') }}"
         sequence:
           - action: light.turn_on
             target:
-              entity_id: !input scene1_light
+              entity_id: !input light_1
             data:
               brightness_step_pct: "{{ step }}"
               transition: 0
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_2') or 'taste_2' in ent }}"
+            value_template: "{{ ent.endswith('_2') }}"
           - condition: template
-            value_template: "{{ is_state(s1, 'on') }}"
+            value_template: "{{ is_state(l1, 'on') }}"
         sequence:
           - action: light.turn_on
             target:
-              entity_id: !input scene1_light
+              entity_id: !input light_1
             data:
               brightness_step_pct: "{{ step * -1 }}"
               transition: 0
@@ -99,34 +98,34 @@ action:
       # === MODUS 2 (LED 2) ===
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_6') or 'taste_6' in ent }}"
+            value_template: "{{ ent.endswith('_6') }}"
         sequence:
           - action: light.toggle
             target:
-              entity_id: !input scene2_light
+              entity_id: !input light_2
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_4') or 'taste_4' in ent }}"
+            value_template: "{{ ent.endswith('_4') }}"
           - condition: template
-            value_template: "{{ is_state(s2, 'on') }}"
+            value_template: "{{ is_state(l2, 'on') }}"
         sequence:
           - action: light.turn_on
             target:
-              entity_id: !input scene2_light
+              entity_id: !input light_2
             data:
               brightness_step_pct: "{{ step }}"
               transition: 0
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_5') or 'taste_5' in ent }}"
+            value_template: "{{ ent.endswith('_5') }}"
           - condition: template
-            value_template: "{{ is_state(s2, 'on') }}"
+            value_template: "{{ is_state(l2, 'on') }}"
         sequence:
           - action: light.turn_on
             target:
-              entity_id: !input scene2_light
+              entity_id: !input light_2
             data:
               brightness_step_pct: "{{ step * -1 }}"
               transition: 0
@@ -134,34 +133,34 @@ action:
       # === MODUS 3 (LED 3) ===
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_9') or 'taste_9' in ent }}"
+            value_template: "{{ ent.endswith('_9') }}"
         sequence:
           - action: light.toggle
             target:
-              entity_id: !input scene3_light
+              entity_id: !input light_3
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_7') or 'taste_7' in ent }}"
+            value_template: "{{ ent.endswith('_7') }}"
           - condition: template
-            value_template: "{{ is_state(s3, 'on') }}"
+            value_template: "{{ is_state(l3, 'on') }}"
         sequence:
           - action: light.turn_on
             target:
-              entity_id: !input scene3_light
+              entity_id: !input light_3
             data:
               brightness_step_pct: "{{ step }}"
               transition: 0
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_8') or 'taste_8' in ent }}"
+            value_template: "{{ ent.endswith('_8') }}"
           - condition: template
-            value_template: "{{ is_state(s3, 'on') }}"
+            value_template: "{{ is_state(l3, 'on') }}"
         sequence:
           - action: light.turn_on
             target:
-              entity_id: !input scene3_light
+              entity_id: !input light_3
             data:
               brightness_step_pct: "{{ step * -1 }}"
               transition: 0
