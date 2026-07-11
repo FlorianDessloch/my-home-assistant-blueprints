@@ -1,0 +1,101 @@
+blueprint:
+  name: Blesa 2-Tasten Schalter - Lichtsteuerung (Toggle & Dimmen)
+  description: >
+    Steuert eine Licht-Gruppe oder ein Leuchtmittel mit einem 2-Tasten-Blesa-Schalter (Z2M).
+    - Taste 1 (Großer Punkt): Single Click = Toggle | Hold = Hochdimmen
+    - Taste 2 (Kleiner Punkt): Single Click = Toggle | Hold = Runterdimmen
+  domain: automation
+  source_url: https://github.com/FlorianDessloch/my-home-assistant-blueprints/blob/main/ikea_bilrea_button_dimmer.yaml
+  input:
+    switch_action_sensor:
+      name: Schalter Action-Sensor
+      description: Wählen Sie den Action-Sensor des Blesa-Schalters aus (z. B. sensor.blesa_schalter_action).
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+    target_light:
+      name: Ziel-Licht / Licht-Gruppe
+      description: Das zu steuernde Licht oder die Licht-Gruppe.
+      selector:
+        target:
+          entity:
+            - domain: light
+    dim_step:
+      name: Dimm-Schrittweite (%)
+      description: Um wie viel Prozent die Helligkeit pro Intervall angepasst wird.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 20
+          unit_of_measurement: "%"
+    dim_speed:
+      name: Dimm-Geschwindigkeit (Intervall in ms)
+      description: Zeitabstand zwischen den Dimm-Schritten in Millisekunden (kleinerer Wert = schnelleres Dimmen).
+      default: 300
+      selector:
+        number:
+          min: 100
+          max: 1000
+          step: 50
+          unit_of_measurement: "ms"
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input switch_action_sensor
+
+action:
+  - choose:
+      # --- TASTE 1 (Großer Punkt) : Single Click -> Toggle ---
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['1_single', 'button_1_single', 'left_single'] }}"
+        sequence:
+          - service: light.toggle
+            target: !input target_light
+
+      # --- TASTE 2 (Kleiner Punkt) : Single Click -> Toggle ---
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['2_single', 'button_2_single', 'right_single'] }}"
+        sequence:
+          - service: light.toggle
+            target: !input target_light
+
+      # --- TASTE 1 (Großer Punkt) : Hold -> Hochdimmen ---
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['1_hold', 'button_1_hold', 'left_hold'] }}"
+        sequence:
+          - repeat:
+              while:
+                - condition: template
+                  value_template: "{{ states(inputs.switch_action_sensor) not in ['release', '1_release', ''] }}"
+              sequence:
+                - service: light.turn_on
+                  target: !input target_light
+                  data:
+                    brightness_step_pct: !input dim_step
+                - delay:
+                    milliseconds: !input dim_speed
+
+      # --- TASTE 2 (Kleiner Punkt) : Hold -> Runterdimmen ---
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['2_hold', 'button_2_hold', 'right_hold'] }}"
+        sequence:
+          - repeat:
+              while:
+                - condition: template
+                  value_template: "{{ states(inputs.switch_action_sensor) not in ['release', '2_release', ''] }}"
+              sequence:
+                - service: light.turn_on
+                  target: !input target_light
+                  data:
+                    brightness_step_pct: "{{ (inputs.dim_step | int) * -1 }}"
+                - delay:
+                    milliseconds: !input dim_speed
