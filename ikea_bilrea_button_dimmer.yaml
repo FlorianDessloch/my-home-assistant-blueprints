@@ -1,5 +1,5 @@
 blueprint:
-  name: Blesa 2-Tasten Schalter - Lichtsteuerung (Toggle & Dimmen)
+  name: Bilresa 2-Tasten Schalter - Lichtsteuerung (Toggle & Dimmen)
   description: >
     Steuert eine Licht-Gruppe oder ein Leuchtmittel mit einem 2-Tasten-Blesa-Schalter (Z2M).
     - Taste 1 (Großer Punkt): Single Click = Toggle | Hold = Hochdimmen
