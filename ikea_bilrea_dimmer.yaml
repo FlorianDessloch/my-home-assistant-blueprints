@@ -50,7 +50,6 @@ trigger:
     event_type: state_changed
 
 condition:
-  # Filtert blitzschnell nur Events von deiner gewählten BILRESA heraus
   - condition: template
     value_template: "{{ trigger.event.data.entity_id in device_entities(target_device) }}"
   - condition: template
@@ -61,17 +60,22 @@ condition:
 action:
   - variables:
       ent: "{{ trigger.event.data.entity_id }}"
+      new_st: "{{ trigger.event.data.new_state.state }}"
 
   - choose:
       # === MODUS 1 (LED 1) ===
+      # Ein/Aus: Reagiert nur beim DRÜCKEN (Wert = 1), ignoriert das LOSLASSEN (Wert = 0)
       - conditions:
           - condition: template
             value_template: "{{ ent.endswith('_3') or 'taste_3' in ent }}"
+          - condition: template
+            value_template: "{{ new_st in ['1', 'on', 'true', 1] or 'event.' in ent }}"
         sequence:
           - action: light.toggle
             target:
               entity_id: !input light_1
 
+      # Scroll Up: Nur dimmen, wenn Lampe AN ist
       - conditions:
           - condition: template
             value_template: "{{ ent.endswith('_1') or 'taste_1' in ent }}"
@@ -85,6 +89,7 @@ action:
               brightness_step_pct: "{{ step }}"
               transition: 0
 
+      # Scroll Down: Nur dimmen, wenn Lampe AN ist
       - conditions:
           - condition: template
             value_template: "{{ ent.endswith('_2') or 'taste_2' in ent }}"
@@ -102,6 +107,8 @@ action:
       - conditions:
           - condition: template
             value_template: "{{ ent.endswith('_6') or 'taste_6' in ent }}"
+          - condition: template
+            value_template: "{{ new_st in ['1', 'on', 'true', 1] or 'event.' in ent }}"
         sequence:
           - action: light.toggle
             target:
@@ -137,6 +144,8 @@ action:
       - conditions:
           - condition: template
             value_template: "{{ ent.endswith('_9') or 'taste_9' in ent }}"
+          - condition: template
+            value_template: "{{ new_st in ['1', 'on', 'true', 1] or 'event.' in ent }}"
         sequence:
           - action: light.toggle
             target:
