@@ -1,0 +1,80 @@
+blueprint:
+  name: "Minimum Temperatursensor mit Altersschutz"
+  description: >
+    Berechnet das Minimum aus bis zu 4 Temperatursensoren.
+    Sensoren, deren letzte Aktualisierung älter als das definierte Maximum ist, 
+    werden automatisch ignoriert.
+  domain: template
+  input:
+    sensor_1:
+      name: Erster Sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    sensor_2:
+      name: Zweiter Sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    sensor_3:
+      name: Dritter Sensor (optional)
+      default: []
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    sensor_4:
+      name: Vierter Sensor (optional)
+      default: []
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    max_age_minutes:
+      name: Maximales Alter (Minuten)
+      description: Sensoren, die länger als x Minuten keine neuen Daten geschickt haben, werden ignoriert.
+      default: 6
+      selector:
+        number:
+          min: 1
+          max: 120
+          unit_of_measurement: "min"
+
+sensor:
+  - name: >-
+      {{ name | default('Raum Temperatur Minimum') }}
+    state_class: measurement
+    device_class: temperature
+    unit_of_measurement: "°C"
+    state: >
+      {% set max_age_sec = (inputs.max_age_minutes | int(6)) * 60 %}
+      {% set current_time = now().timestamp() %}
+      
+      {% set raw_entities = [
+        inputs.sensor_1,
+        inputs.sensor_2,
+        inputs.sensor_3,
+        inputs.sensor_4
+      ] %}
+      
+      {% set valid_values = namespace(values=[]) %}
+      
+      {% for entity_id in raw_entities %}
+        {% if entity_id and states(entity_id) is defined %}
+          {% set s = states[entity_id.split('.')[0]][entity_id.split('.')[1]] if entity_id in states else none %}
+          {% if s is not none and s.state | is_number %}
+            {% set age = current_time - as_timestamp(s.last_updated) %}
+            {% if age <= max_age_sec %}
+              {% set valid_values.values = valid_values.values + [s.state | float] %}
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+
+      {% if valid_values.values | length > 0 %}
+        {{ valid_values.values | min }}
+      {% else %}
+        unavailable
+      {% endif %}
