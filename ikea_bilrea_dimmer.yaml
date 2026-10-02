@@ -1,5 +1,5 @@
 blueprint:
-  name: "IKEA BILRESA - KAJPLATS Dimmer Steuerung (mit OFF-Sperre)"
+  name: "IKEA BILRESA - KAJPLATS Dimmer Steuerung (Event-basiert)"
   description: "Dimmer Steuerung für BILRESA. Ignoriert Scroll-Events bei ausgeschalteter Lampe, um ungewolltes Wiedereinschalten zu verhindern."
   domain: automation
   source_url: https://github.com/FlorianDessloch/my-home-assistant-blueprints/blob/main/ikea_bilrea_dimmer.yaml
@@ -50,9 +50,9 @@ trigger:
     event_type: state_changed
 
 condition:
-  # Nur Sensoren des Geräts verarbeiten (schließt parallele event.-Signale aus)
+  # Akzeptiert jetzt auch 'event.' Entitäten
   - condition: template
-    value_template: "{{ trigger.event.data.entity_id.startswith('sensor.') }}"
+    value_template: "{{ trigger.event.data.entity_id.startswith('event.') or trigger.event.data.entity_id.startswith('sensor.') }}"
   - condition: template
     value_template: "{{ trigger.event.data.entity_id in device_entities(target_device) }}"
   - condition: template
@@ -69,9 +69,9 @@ action:
       # === MODUS 1 (LED 1) ===
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_3') }}"
+            value_template: "{{ ent.endswith('_3') or ent.endswith('_taste_3') }}"
           - condition: template
-            value_template: "{{ new_st in ['1', 1, 'on', 'true'] }}"
+            value_template: "{{ new_st not in ['unavailable', 'unknown'] }}"
         sequence:
           - action: light.toggle
             target:
@@ -81,7 +81,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_1') }}"
+            value_template: "{{ ent.endswith('_1') or ent.endswith('_taste_1') }}"
           - condition: template
             value_template: "{{ is_state(l1, 'on') }}"
         sequence:
@@ -94,7 +94,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_2') }}"
+            value_template: "{{ ent.endswith('_2') or ent.endswith('_taste_2') }}"
           - condition: template
             value_template: "{{ is_state(l1, 'on') }}"
         sequence:
@@ -108,9 +108,9 @@ action:
       # === MODUS 2 (LED 2) ===
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_6') }}"
+            value_template: "{{ ent.endswith('_6') or ent.endswith('_taste_6') }}"
           - condition: template
-            value_template: "{{ new_st in ['1', 1, 'on', 'true'] }}"
+            value_template: "{{ new_st not in ['unavailable', 'unknown'] }}"
         sequence:
           - action: light.toggle
             target:
@@ -120,7 +120,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_4') }}"
+            value_template: "{{ ent.endswith('_4') or ent.endswith('_taste_4') }}"
           - condition: template
             value_template: "{{ is_state(l2, 'on') }}"
         sequence:
@@ -133,7 +133,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_5') }}"
+            value_template: "{{ ent.endswith('_5') or ent.endswith('_taste_5') }}"
           - condition: template
             value_template: "{{ is_state(l2, 'on') }}"
         sequence:
@@ -147,9 +147,9 @@ action:
       # === MODUS 3 (LED 3) ===
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_9') }}"
+            value_template: "{{ ent.endswith('_9') or ent.endswith('_taste_9') }}"
           - condition: template
-            value_template: "{{ new_st in ['1', 1, 'on', 'true'] }}"
+            value_template: "{{ new_st not in ['unavailable', 'unknown'] }}"
         sequence:
           - action: light.toggle
             target:
@@ -159,7 +159,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_7') }}"
+            value_template: "{{ ent.endswith('_7') or ent.endswith('_taste_7') }}"
           - condition: template
             value_template: "{{ is_state(l3, 'on') }}"
         sequence:
@@ -172,7 +172,7 @@ action:
 
       - conditions:
           - condition: template
-            value_template: "{{ ent.endswith('_8') }}"
+            value_template: "{{ ent.endswith('_8') or ent.endswith('_taste_8') }}"
           - condition: template
             value_template: "{{ is_state(l3, 'on') }}"
         sequence:
