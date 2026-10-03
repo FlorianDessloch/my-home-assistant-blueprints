@@ -1,6 +1,6 @@
 blueprint:
   name: "IKEA BILRESA - KAJPLATS Dimmer Steuerung (Event-Fix)"
-  description: "Dimmer Steuerung für BILRESA mit event._taste_1 bis _taste_9 Entitäten. Ignoriert Scroll-Events bei ausgeschalteter Lampe."
+  description: "Dimmer Steuerung für BILRESA mit event._taste_1 bis _taste_9 Entitäten."
   domain: automation
   source_url: https://github.com/FlorianDessloch/my-home-assistant-blueprints/blob/main/ikea_bilrea_dimmer.yaml
   input:
@@ -35,8 +35,8 @@ blueprint:
           max: 20
           unit_of_measurement: "%"
 
-mode: restart
-max_exceeded: silent
+mode: queued
+max: 10
 
 variables:
   target_device: !input bilresa_device
@@ -50,9 +50,6 @@ trigger:
     event_type: state_changed
 
 condition:
-  # Nur event.- und sensor.-Entitäten des Geräts verarbeiten
-  - condition: template
-    value_template: "{{ trigger.event.data.entity_id.startswith('event.') or trigger.event.data.entity_id.startswith('sensor.') }}"
   - condition: template
     value_template: "{{ trigger.event.data.entity_id in device_entities(target_device) }}"
   - condition: template
@@ -73,7 +70,7 @@ action:
             target:
               entity_id: !input light_1
           - delay:
-              milliseconds: 300
+              milliseconds: 200
 
       # Taste 1: Heller
       - conditions:
@@ -87,7 +84,6 @@ action:
               entity_id: !input light_1
             data:
               brightness_step_pct: "{{ step }}"
-              transition: 0
 
       # Taste 2: Dunkler
       - conditions:
@@ -101,7 +97,6 @@ action:
               entity_id: !input light_1
             data:
               brightness_step_pct: "{{ step * -1 }}"
-              transition: 0
 
       # === MODUS 2 (LED 2) ===
       # Taste 6: Toggle
@@ -113,7 +108,7 @@ action:
             target:
               entity_id: !input light_2
           - delay:
-              milliseconds: 300
+              milliseconds: 200
 
       # Taste 4: Heller
       - conditions:
@@ -127,7 +122,6 @@ action:
               entity_id: !input light_2
             data:
               brightness_step_pct: "{{ step }}"
-              transition: 0
 
       # Taste 5: Dunkler
       - conditions:
@@ -141,7 +135,6 @@ action:
               entity_id: !input light_2
             data:
               brightness_step_pct: "{{ step * -1 }}"
-              transition: 0
 
       # === MODUS 3 (LED 3) ===
       # Taste 9: Toggle
@@ -153,7 +146,7 @@ action:
             target:
               entity_id: !input light_3
           - delay:
-              milliseconds: 300
+              milliseconds: 200
 
       # Taste 7: Heller
       - conditions:
@@ -167,7 +160,6 @@ action:
               entity_id: !input light_3
             data:
               brightness_step_pct: "{{ step }}"
-              transition: 0
 
       # Taste 8: Dunkler
       - conditions:
@@ -181,4 +173,3 @@ action:
               entity_id: !input light_3
             data:
               brightness_step_pct: "{{ step * -1 }}"
-              transition: 0
